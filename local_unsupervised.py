@@ -46,8 +46,10 @@ class UnsupervisedLocalUpdate(object):
         net_ema = ModelFedCon(args.model, args.out_dim, n_classes=n_classes)
 
         if len(args.gpu.split(',')) > 1:
-            net = torch.nn.DataParallel(net, device_ids=[i for i in range(round(len(args.gpu) / 2))])
-            net_ema = torch.nn.DataParallel(net_ema, device_ids=[i for i in range(round(len(args.gpu) / 2))])
+            net = torch.nn.DataParallel(
+                net, device_ids=[i for i in range(round(len(args.gpu) / 2))])
+            net_ema = torch.nn.DataParallel(
+                net_ema, device_ids=[i for i in range(round(len(args.gpu) / 2))])
         self.ema_model = net_ema.cuda()
         self.model = net.cuda()
 
@@ -60,9 +62,11 @@ class UnsupervisedLocalUpdate(object):
         self.unsup_lr = args.unsup_lr
         self.softmax = nn.Softmax()
         self.max_grad_norm = args.max_grad_norm
-        self.norm = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+        self.norm = transforms.Normalize(
+            mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
 
-        self.max_step = args.rounds * round(len(self.data_idxs) / args.batch_size)
+        self.max_step = args.rounds * \
+            round(len(self.data_idxs) / args.batch_size)
         if args.opt == 'adam':
             self.optimizer = torch.optim.Adam(self.model.parameters(), lr=args.unsup_lr,
                                               betas=(0.9, 0.999), weight_decay=5e-4)
@@ -72,7 +76,8 @@ class UnsupervisedLocalUpdate(object):
         elif args.opt == 'adamw':
             self.optimizer = torch.optim.AdamW(self.model.parameters(), lr=args.unsup_lr,
                                                weight_decay=0.02)
-        self.max_warmup_step = round(len(self.data_idxs) / args.batch_size) * args.num_warmup_epochs
+        self.max_warmup_step = round(
+            len(self.data_idxs) / args.batch_size) * args.num_warmup_epochs
         self.ramp_up = LinearRampUp(length=self.max_warmup_step)
 
     def train(self, args, net_w, op_dict, epoch, unlabeled_idx, train_dl_local, n_classes):
@@ -95,20 +100,23 @@ class UnsupervisedLocalUpdate(object):
             logging.info('EMA model initialized')
 
         epoch_loss = []
-        logging.info('Unlabeled client %d begin unsupervised training' % unlabeled_idx)
+        logging.info(
+            'Unlabeled client %d begin unsupervised training' % unlabeled_idx)
         correct_pseu = 0
         all_pseu = 0
         test_right = 0
         test_right_ema = 0
         train_right = 0
         same_total = 0
-        for epoch in range(args.local_ep):
+        for epoch in range(args.local_unsup_ep):
             batch_loss = []
 
             for i, (_, weak_aug_batch, label_batch) in enumerate(train_dl_local):
-                weak_aug_batch = [weak_aug_batch[version].cuda() for version in range(len(weak_aug_batch))]
+                weak_aug_batch = [weak_aug_batch[version].cuda()
+                                  for version in range(len(weak_aug_batch))]
                 with torch.no_grad():
-                    guessed = label_guessing(self.ema_model, [weak_aug_batch[0]], args.model)
+                    guessed = label_guessing(
+                        self.ema_model, [weak_aug_batch[0]], args.model)
                     sharpened = sharpen(guessed)
 
                 pseu = torch.argmax(sharpened, dim=1)
@@ -116,29 +124,35 @@ class UnsupervisedLocalUpdate(object):
                 if len(label.shape) == 0:
                     label = label.unsqueeze(dim=0)
 
-                correct_pseu += torch.sum(label[torch.max(sharpened, dim=1)[0] > args.confidence_threshold] == pseu[
+                correct_pseu += torch.sum(label[(torch.max(sharpened, dim=1)[0] > args.confidence_threshold).cpu()] == pseu[
                     torch.max(sharpened, dim=1)[0] > args.confidence_threshold].cpu()).item()
-                all_pseu += len(pseu[torch.max(sharpened, dim=1)[0] > args.confidence_threshold])
-                train_right += sum([pseu[i].cpu() == label_batch[i].int() for i in range(label_batch.shape[0])])
+                all_pseu += len(pseu[torch.max(sharpened, dim=1)
+                                [0] > args.confidence_threshold])
+                train_right += sum([pseu[i].cpu() == label_batch[i].int()
+                                   for i in range(label_batch.shape[0])])
 
                 logits_str = self.model(weak_aug_batch[1], model=args.model)[2]
                 probs_str = F.softmax(logits_str, dim=1)
                 pred_label = torch.argmax(logits_str, dim=1)
 
-                same_total += sum([pred_label[sam] == pseu[sam] for sam in range(logits_str.shape[0])])
+                same_total += sum([pred_label[sam] == pseu[sam]
+                                  for sam in range(logits_str.shape[0])])
 
-                loss_u = torch.sum(losses.softmax_mse_loss(probs_str, sharpened)) / args.batch_size
+                loss_u = torch.sum(losses.softmax_mse_loss(
+                    probs_str, sharpened)) / args.batch_size
 
                 ramp_up_value = self.ramp_up(current=self.epoch)
 
                 loss = ramp_up_value * args.lambda_u * loss_u
+                #loss = ramp_up_value * loss_u
                 self.optimizer.zero_grad()
                 loss.backward()
                 torch.nn.utils.clip_grad_norm_(self.model.parameters(),
                                                max_norm=self.max_grad_norm)
                 self.optimizer.step()
 
-                update_ema_variables(self.model, self.ema_model, args.ema_decay, self.iter_num)
+                update_ema_variables(
+                    self.model, self.ema_model, args.ema_decay, self.iter_num)
 
                 batch_loss.append(loss.item())
 

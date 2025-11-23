@@ -49,7 +49,7 @@ class SupervisedLocalUpdate(object):
         loss_fn = torch.nn.CrossEntropyLoss()
         epoch_loss = []
         logging.info('Begin supervised training')
-        for epoch in range(args.local_ep):
+        for epoch in range(args.local_sup_ep):
             batch_loss = []
             for i, (_, image_batch, label_batch) in enumerate(dataloader):
 

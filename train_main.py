@@ -11,8 +11,9 @@ from FedAvg import FedAvg, model_dist
 import torch
 from torchvision import transforms
 import torch.backends.cudnn as cudnn
-from networks.models import ModelFedCon
+from networks.models import ModelFedCon, PerceptronModel
 from dataloaders import dataset
+from Non_IID_bench import partition_data_non_iid 
 from local_supervised import SupervisedLocalUpdate
 from local_unsupervised import UnsupervisedLocalUpdate
 from tqdm import trange
@@ -31,13 +32,16 @@ def split(dataset, num_users):
 
 def test(epoch, checkpoint, data_test, label_test, n_classes):
 
-    net = ModelFedCon(args.model, args.out_dim, n_classes=n_classes)
+    if args.dataset == 'generated':
+        net = PerceptronModel()
+    else:
+        net = ModelFedCon(args.model, args.out_dim, n_classes=n_classes)
     if len(args.gpu.split(',')) > 1:
         net = torch.nn.DataParallel(net, device_ids=[i for i in range(round(len(args.gpu) / 2))])
     model = net.cuda()
     model.load_state_dict(checkpoint)
 
-    if args.dataset == 'SVHN' or args.dataset == 'cifar100':
+    if args.dataset == 'SVHN' or args.dataset == 'cifar100' or args.dataset == 'cifar10':
         test_dl, test_ds = get_dataloader(args, data_test, label_test,
                                           args.dataset, args.datadir, args.batch_size,
                                           is_labeled=True, is_testing=True)
@@ -46,7 +50,7 @@ def test(epoch, checkpoint, data_test, label_test, n_classes):
                                           args.dataset, args.datadir, args.batch_size,
                                           is_labeled=True, is_testing=True, pre_sz=args.pre_sz, input_sz=args.input_sz)
 
-    AUROCs, Accus = epochVal_metrics_test(model, test_dl, args.model, thresh=0.4, n_classes=n_classes)
+    AUROCs, Accus, *_ = epochVal_metrics_test(model, test_dl, args.model, n_classes=n_classes)
     AUROC_avg = np.array(AUROCs).mean()
     Accus_avg = np.array(Accus).mean()
 
@@ -62,14 +66,16 @@ if __name__ == '__main__':
     total_num = sup_num + unsup_num
 
     os.environ['CUDA_VISIBLE_DEVICES'] = args.gpu
-    time_current = 'attempt0'
+    time_current = 'attempt5'
     if args.log_file_name is None:
         args.log_file_name = 'log-%s' % (datetime.datetime.now().strftime("%m-%d-%H%M-%S"))
     log_path = args.log_file_name + '.log'
     logging.basicConfig(filename=os.path.join(args.logdir, log_path), level=logging.INFO,
                         format='[%(asctime)s.%(msecs)03d] %(message)s', datefmt='%H:%M:%S')
     logger = logging.getLogger()
-    logger.addHandler(logging.StreamHandler(sys.stdout))
+    dataset_name = str(args.dataset)
+    file_handler = logging.FileHandler(f'./log/{dataset_name}.txt')
+    logger.addHandler(file_handler)
     logger.info(str(args))
     logger.info(time_current)
     if args.deterministic:
@@ -84,8 +90,18 @@ if __name__ == '__main__':
 
     if args.dataset == 'SVHN':
         if not os.path.isdir('tensorboard/SVHN/' + time_current):
-            os.mkdir('tensorboard/cares_SVHN/' + time_current)
+            os.mkdir('tensorboard/SVHN/' + time_current)
         writer = SummaryWriter('tensorboard/SVHN/' + time_current)
+
+    if args.dataset == 'cifar10':
+        if not os.path.isdir('tensorboard/cifar10/' + time_current):
+            os.mkdir('tensorboard/cifar10/' + time_current)
+        writer = SummaryWriter('tensorboard/cifar10/' + time_current)
+
+    if args.dataset == 'feminst':
+        if not os.path.isdir('tensorboard/femnisst/' + time_current):
+            os.mkdir('tensorboard/femnist/' + time_current)
+        writer = SummaryWriter('tensorboard/femnist/' + time_current)
 
     elif args.dataset == 'cifar100':
         if not os.path.isdir('tensorboard/cifar100/' + time_current):
@@ -102,10 +118,14 @@ if __name__ == '__main__':
         os.mkdir(snapshot_path)
     if args.dataset == 'SVHN':
         snapshot_path = 'model/SVHN/'
+    if args.dataset == 'cifar10':
+        snapshot_path = 'model/cifar10/'
     if args.dataset == 'cifar100':
         snapshot_path = 'model/cifar100/'
     if args.dataset == 'skin':
         snapshot_path = 'model/skin/'
+    if args.dataset == 'femnist':
+        snapshot_path = 'model/femnist/'
     if not os.path.isdir(snapshot_path):
         os.mkdir(snapshot_path)
 
@@ -119,8 +139,11 @@ if __name__ == '__main__':
         partition = torch.load('partition_strategy/cifar100_noniid_10%labeled.pth')
         net_dataidx_map = partition['data_partition']
 
-    X_train, y_train, X_test, y_test, _, traindata_cls_counts = partition_data_allnoniid(
-        args.dataset, args.datadir, partition=args.partition, n_parties=total_num, beta=args.beta)
+    # X_train, y_train, X_test, y_test, net_dataidx_map, traindata_cls_counts = partition_data_allnoniid(
+    #     args.dataset, args.datadir, partition=args.partition, n_parties=total_num, beta=args.beta)
+
+    X_train, y_train, X_test, y_test, net_dataidx_map, traindata_cls_counts = partition_data_non_iid(
+        args.dataset, args.datadir, args.logdir, args.partition, args.n_parties, beta=args.beta)
 
     if args.dataset == 'SVHN':
         X_train = X_train.transpose([0, 2, 3, 1])
@@ -132,7 +155,12 @@ if __name__ == '__main__':
         n_classes = 100
     elif args.dataset == 'skin':
         n_classes = 7
-    net_glob = ModelFedCon(args.model, args.out_dim, n_classes=n_classes)
+    elif args.dataset == 'feminst':
+        n_classes = 62
+    if args.dataset == 'generated':
+        net_glob = PerceptronModel()
+    else:
+        net_glob = ModelFedCon(args.model, args.out_dim, n_classes=n_classes)
 
     if args.resume:
         print('==> Resuming from checkpoint..')
@@ -220,6 +248,10 @@ if __name__ == '__main__':
             logger.info(f'Comm round {com_round} meta round {meta_round} chosen client: {clt_list_this_meta_round}')
             w_locals_this_meta_round = []
             for client_idx in clt_list_this_meta_round:
+                noise_level = args.noise
+                if client_idx == args.n_parties - 1:
+                    noise_level = 0
+                noise_level = args.noise / (args.n_parties - 1) * client_idx
                 if client_idx in supervised_user_id:
                     local = lab_trainer_locals[client_idx]
                     optimizer = sup_optim_locals[client_idx]
@@ -228,7 +260,7 @@ if __name__ == '__main__':
                                                                     args.dataset, args.datadir, args.batch_size,
                                                                     is_labeled=True,
                                                                     data_idxs=net_dataidx_map[client_idx],
-                                                                    pre_sz=args.pre_sz, input_sz=args.input_sz)
+                                                                    pre_sz=args.pre_sz, input_sz=args.input_sz, noise_level=noise_level)
                     w, loss, op = local.train(args, sup_net_locals[client_idx].state_dict(), optimizer,
                                                            train_dl_local, n_classes)  # network, loss, optimizer
                     writer.add_scalar('Supervised loss on sup client %d' % client_idx, loss, global_step=com_round)
@@ -253,12 +285,12 @@ if __name__ == '__main__':
                                                                     args.dataset,
                                                                     args.datadir, args.batch_size, is_labeled=False,
                                                                     data_idxs=net_dataidx_map[client_idx],
-                                                                    pre_sz=args.pre_sz, input_sz=args.input_sz)
+                                                                    pre_sz=args.pre_sz, input_sz=args.input_sz, noise_level=noise_level)
                     w, w_ema, loss, op, ratio, correct_pseu, all_pseu, test_right, train_right, test_right_ema, same_pred_num = local.train(
                         args,
                         unsup_net_locals[client_idx - sup_num].state_dict(),
                         optimizer,
-                        com_round * args.local_ep,
+                        com_round * args.local_unsup_ep,
                         client_idx,
                         train_dl_local, n_classes)
                     writer.add_scalar('Unsupervised loss on unsup client %d' % client_idx, loss, global_step=com_round)
@@ -297,8 +329,8 @@ if __name__ == '__main__':
                 dist = model_dist(w_locals_this_meta_round[cli_idx], w_avg_temp)
                 dist_list.append(dist)
             print(
-                'Normed dist * 1e4 : ' + f'{[dist_list[i] * 1e5 / each_lenth_this_meta_raw[i] for i in range(args.meta_client_num)]}')
-
+                'Normed dist * 1e4 : ' + f'{[dist_list[i] * 1e4 / each_lenth_this_meta_raw[i] for i in range(args.meta_client_num)]}')
+            print(f'debug:{dist_list}')
             if len(chosen_sup) != 0:
                 clt_freq_this_meta_uncer = [
                     np.exp(-dist_list[i] * args.sup_scale / each_lenth_this_meta_raw[i]) * clt_freq_this_meta_round[i] for i
@@ -313,7 +345,7 @@ if __name__ == '__main__':
                     np.exp(-dist_list[i] * dist_scale_f / each_lenth_this_meta_raw[i]) * clt_freq_this_meta_round[i]
                     for i
                     in range(args.meta_client_num)]
-
+            print(f'debug:{clt_freq_this_meta_uncer}')
             total = sum(clt_freq_this_meta_uncer)
             clt_freq_this_meta_dist = [clt_freq_this_meta_uncer[i] / total for i in range(args.meta_client_num)]
             clt_freq_this_meta_round = clt_freq_this_meta_dist
@@ -344,7 +376,7 @@ if __name__ == '__main__':
         loss_avg = sum(loss_locals) / len(loss_locals)
         logger.info(
             '************ Loss Avg {}, LR {}, Round {} ends ************  '.format(loss_avg, args.base_lr, com_round))
-        if com_round % 6 == 0:
+        if com_round % 50 == 0:
             if not os.path.isdir(snapshot_path + time_current):
                 os.mkdir(snapshot_path + time_current)
             save_mode_path = os.path.join(snapshot_path + time_current, 'epoch_' + str(com_round) + '.pth')

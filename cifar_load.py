@@ -1,4 +1,5 @@
 import numpy as np
+import torch
 import torchvision.transforms as transforms
 import torch.utils.data as data
 import logging
@@ -9,7 +10,7 @@ logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 from datasets import CIFAR10_truncated, SVHN_truncated, CIFAR100_truncated
 import pandas as pd
-
+from math import sqrt
 
 def load_cifar10_data(datadir):
     transform = transforms.Compose([transforms.ToTensor()])
@@ -195,12 +196,26 @@ def partition_data_allnoniid(dataset, datadir, train_idxs=None, test_idxs=None, 
     else:
         return np.array(X_train), np.array(y_train), np.array(X_test), np.array(y_test)
 
+class AddGaussianNoise(object):
+    def __init__(self, mean=0., std=1.):
+        self.std = std
+        self.mean = mean
+
+    def __call__(self, tensor):
+            return tensor + torch.randn(tensor.size()) * self.std + self.mean
+
+    def __repr__(self):
+        return self.__class__.__name__ + '(mean={0}, std={1})'.format(self.mean, self.std)
 
 def get_dataloader(args, data_np, label_np, dataset_type, datadir, train_bs, is_labeled=None, data_idxs=None,
-                   is_testing=False, pre_sz=40, input_sz=32):
+                   is_testing=False, pre_sz=40, input_sz=32, noise_level=0):
     if dataset_type == 'SVHN':
         normalize = transforms.Normalize(mean=[0.4376821, 0.4437697, 0.47280442],
                                          std=[0.19803012, 0.20101562, 0.19703614])
+        assert pre_sz == 40 and input_sz == 32, 'Error: Wrong input size for 32*32 dataset'
+    elif dataset_type == 'cifar10':
+        normalize = transforms.Normalize(mean=[0.49139968, 0.48215827, 0.44653124],
+                                         std=[0.24703233, 0.24348505, 0.26158768])
         assert pre_sz == 40 and input_sz == 32, 'Error: Wrong input size for 32*32 dataset'
     elif dataset_type == 'cifar100':
         normalize = transforms.Normalize(mean=[0.5070751592371323, 0.48654887331495095, 0.4409178433670343],
@@ -209,13 +224,17 @@ def get_dataloader(args, data_np, label_np, dataset_type, datadir, train_bs, is_
     elif dataset_type == 'skin':
         normalize = transforms.Normalize(mean=[0.7630332, 0.5456457, 0.57004654],
                                          std=[0.14092809, 0.15261231, 0.16997086])
-
+    elif dataset_type == 'generated':
+        # ds_gene = dataset.Generated(datadir, data_idxs, train=True)
+        # dl_gene = data.DataLoader(dataset=ds_gene, batch_size=train_bs, drop_last=False, shuffle=True, num_workers=8)
+        pass
     if not is_testing:
         if is_labeled:
             trans = transforms.Compose(
                 [transforms.RandomCrop(size=(input_sz, input_sz)),
                  transforms.RandomHorizontalFlip(p=0.5),
                  transforms.ToTensor(),
+                 AddGaussianNoise(0., noise_level),
                  normalize
                  ])
             ds = dataset.CheXpertDataset(dataset_type, data_np, label_np, pre_sz, pre_sz, lab_trans=trans,
@@ -225,6 +244,7 @@ def get_dataloader(args, data_np, label_np, dataset_type, datadir, train_bs, is_
                 transforms.RandomCrop(size=(input_sz, input_sz)),
                 transforms.RandomHorizontalFlip(p=0.5),
                 transforms.ToTensor(),
+                AddGaussianNoise(0., noise_level),
                 normalize
             ])
 
@@ -235,10 +255,13 @@ def get_dataloader(args, data_np, label_np, dataset_type, datadir, train_bs, is_
                                          is_testing=False)
         dl = data.DataLoader(dataset=ds, batch_size=train_bs, drop_last=False, shuffle=True, num_workers=8)
     else:
-        ds = dataset.CheXpertDataset(dataset_type, data_np, label_np, input_sz, input_sz, lab_trans=transforms.Compose([
-            # K.RandomCrop((224, 224)),
-            transforms.ToTensor(),
-            normalize
-        ]), is_labeled=True, is_testing=True)
-        dl = data.DataLoader(dataset=ds, batch_size=train_bs, drop_last=False, shuffle=False, num_workers=8)
+        if dataset_type == 'generated':
+            pass
+        else:
+            ds = dataset.CheXpertDataset(dataset_type, data_np, label_np, input_sz, input_sz, lab_trans=transforms.Compose([
+                # K.RandomCrop((224, 224)),
+                transforms.ToTensor(),
+                normalize
+            ]), is_labeled=True, is_testing=True)
+            dl = data.DataLoader(dataset=ds, batch_size=train_bs, drop_last=False, shuffle=False, num_workers=8)
     return dl, ds
