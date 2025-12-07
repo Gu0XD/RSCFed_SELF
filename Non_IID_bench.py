@@ -7,29 +7,30 @@ import torch.utils.data as data
 from torch.autograd import Variable
 import torch.nn.functional as F
 import random
-#from sklearn.metrics import confusion_matrix
-#from torch.utils.data import DataLoader
-#import copy
+# from sklearn.metrics import confusion_matrix
+# from torch.utils.data import DataLoader
+# import copy
 
-#from model import *
+# from model import *
 from datasets4noniid import MNIST_truncated, CIFAR10_truncated, CIFAR100_truncated, ImageFolder_custom, SVHN_custom, FashionMNIST_truncated, CustomTensorDataset, CelebA_custom, FEMNIST, Generated, genData
 from math import sqrt
 
-#import torch.nn as nn
+# import torch.nn as nn
 
-#import torch.optim as optim
-#import torchvision.utils as vutils
-#import time
+# import torch.optim as optim
+# import torchvision.utils as vutils
+# import time
 import random
 
-#from models.mnist_model import Generator, Discriminator, DHead, QHead
-#from config import params
-#import sklearn.datasets as sk
+# from models.mnist_model import Generator, Discriminator, DHead, QHead
+# from config import params
+# import sklearn.datasets as sk
 from sklearn.datasets import load_svmlight_file
 
 logging.basicConfig()
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
+
 
 def mkdirs(dirpath):
     try:
@@ -37,12 +38,15 @@ def mkdirs(dirpath):
     except Exception as _:
         pass
 
+
 def load_mnist_data(datadir):
 
     transform = transforms.Compose([transforms.ToTensor()])
 
-    mnist_train_ds = MNIST_truncated(datadir, train=True, download=True, transform=transform)
-    mnist_test_ds = MNIST_truncated(datadir, train=False, download=True, transform=transform)
+    mnist_train_ds = MNIST_truncated(
+        datadir, train=True, download=True, transform=transform)
+    mnist_test_ds = MNIST_truncated(
+        datadir, train=False, download=True, transform=transform)
 
     X_train, y_train = mnist_train_ds.data, mnist_train_ds.target
     X_test, y_test = mnist_test_ds.data, mnist_test_ds.target
@@ -53,13 +57,16 @@ def load_mnist_data(datadir):
     y_test = y_test.data.numpy()
 
     return (X_train, y_train, X_test, y_test)
+
 
 def load_fmnist_data(datadir):
 
     transform = transforms.Compose([transforms.ToTensor()])
 
-    mnist_train_ds = FashionMNIST_truncated(datadir, train=True, download=True, transform=transform)
-    mnist_test_ds = FashionMNIST_truncated(datadir, train=False, download=True, transform=transform)
+    mnist_train_ds = FashionMNIST_truncated(
+        datadir, train=True, download=True, transform=transform)
+    mnist_test_ds = FashionMNIST_truncated(
+        datadir, train=False, download=True, transform=transform)
 
     X_train, y_train = mnist_train_ds.data, mnist_train_ds.target
     X_test, y_test = mnist_test_ds.data, mnist_test_ds.target
@@ -71,12 +78,15 @@ def load_fmnist_data(datadir):
 
     return (X_train, y_train, X_test, y_test)
 
+
 def load_svhn_data(datadir):
 
     transform = transforms.Compose([transforms.ToTensor()])
 
-    svhn_train_ds = SVHN_custom(datadir, train=True, download=True, transform=transform)
-    svhn_test_ds = SVHN_custom(datadir, train=False, download=True, transform=transform)
+    svhn_train_ds = SVHN_custom(
+        datadir, train=True, download=True, transform=transform)
+    svhn_test_ds = SVHN_custom(
+        datadir, train=False, download=True, transform=transform)
 
     X_train, y_train = svhn_train_ds.data, svhn_train_ds.target
     X_test, y_test = svhn_test_ds.data, svhn_test_ds.target
@@ -93,8 +103,10 @@ def load_cifar10_data(datadir):
 
     transform = transforms.Compose([transforms.ToTensor()])
 
-    cifar10_train_ds = CIFAR10_truncated(datadir, train=True, download=True, transform=transform)
-    cifar10_test_ds = CIFAR10_truncated(datadir, train=False, download=True, transform=transform)
+    cifar10_train_ds = CIFAR10_truncated(
+        datadir, train=True, download=True, transform=transform)
+    cifar10_test_ds = CIFAR10_truncated(
+        datadir, train=False, download=True, transform=transform)
 
     X_train, y_train = cifar10_train_ds.data, cifar10_train_ds.target
     X_test, y_test = cifar10_test_ds.data, cifar10_test_ds.target
@@ -104,27 +116,33 @@ def load_cifar10_data(datadir):
 
     return (X_train, y_train, X_test, y_test)
 
+
 def load_celeba_data(datadir):
 
     transform = transforms.Compose([transforms.ToTensor()])
 
-    celeba_train_ds = CelebA_custom(datadir, split='train', target_type="attr", download=True, transform=transform)
-    celeba_test_ds = CelebA_custom(datadir, split='test', target_type="attr", download=True, transform=transform)
+    celeba_train_ds = CelebA_custom(
+        datadir, split='train', target_type="attr", download=True, transform=transform)
+    celeba_test_ds = CelebA_custom(
+        datadir, split='test', target_type="attr", download=True, transform=transform)
 
     gender_index = celeba_train_ds.attr_names.index('Male')
-    y_train =  celeba_train_ds.attr[:,gender_index:gender_index+1].reshape(-1)
-    y_test = celeba_test_ds.attr[:,gender_index:gender_index+1].reshape(-1)
+    y_train = celeba_train_ds.attr[:, gender_index:gender_index+1].reshape(-1)
+    y_test = celeba_test_ds.attr[:, gender_index:gender_index+1].reshape(-1)
 
     # y_train = y_train.numpy()
     # y_test = y_test.numpy()
 
     return (None, y_train, None, y_test)
 
+
 def load_femnist_data(datadir):
     transform = transforms.Compose([transforms.ToTensor()])
 
-    mnist_train_ds = FEMNIST(datadir, train=True, transform=transform, download=True)
-    mnist_test_ds = FEMNIST(datadir, train=False, transform=transform, download=True)
+    mnist_train_ds = FEMNIST(
+        datadir, train=True, transform=transform, download=True)
+    mnist_test_ds = FEMNIST(datadir, train=False,
+                            transform=transform, download=True)
 
     X_train, y_train, u_train = mnist_train_ds.data, mnist_train_ds.targets, mnist_train_ds.users_index
     X_test, y_test, u_test = mnist_test_ds.data, mnist_test_ds.targets, mnist_test_ds.users_index
@@ -138,11 +156,14 @@ def load_femnist_data(datadir):
 
     return (X_train, y_train, u_train, X_test, y_test, u_test)
 
+
 def load_cifar100_data(datadir):
     transform = transforms.Compose([transforms.ToTensor()])
 
-    cifar100_train_ds = CIFAR100_truncated(datadir, train=True, download=True, transform=transform)
-    cifar100_test_ds = CIFAR100_truncated(datadir, train=False, download=True, transform=transform)
+    cifar100_train_ds = CIFAR100_truncated(
+        datadir, train=True, download=True, transform=transform)
+    cifar100_test_ds = CIFAR100_truncated(
+        datadir, train=False, download=True, transform=transform)
 
     X_train, y_train = cifar100_train_ds.data, cifar100_train_ds.target
     X_test, y_test = cifar100_test_ds.data, cifar100_test_ds.target
@@ -158,10 +179,13 @@ def load_tinyimagenet_data(datadir):
     xray_train_ds = ImageFolder_custom(datadir+'./train/', transform=transform)
     xray_test_ds = ImageFolder_custom(datadir+'./val/', transform=transform)
 
-    X_train, y_train = np.array([s[0] for s in xray_train_ds.samples]), np.array([int(s[1]) for s in xray_train_ds.samples])
-    X_test, y_test = np.array([s[0] for s in xray_test_ds.samples]), np.array([int(s[1]) for s in xray_test_ds.samples])
+    X_train, y_train = np.array([s[0] for s in xray_train_ds.samples]), np.array([
+        int(s[1]) for s in xray_train_ds.samples])
+    X_test, y_test = np.array([s[0] for s in xray_test_ds.samples]), np.array(
+        [int(s[1]) for s in xray_test_ds.samples])
 
     return (X_train, y_train, X_test, y_test)
+
 
 def record_net_data_stats(y_train, net_dataidx_map, logdir):
 
@@ -178,8 +202,8 @@ def record_net_data_stats(y_train, net_dataidx_map, logdir):
 
 
 def partition_data_non_iid(dataset, datadir, logdir, partition, n_parties, beta=0.4):
-    #np.random.seed(2020)
-    #torch.manual_seed(2020)
+    # np.random.seed(2020)
+    # torch.manual_seed(2020)
 
     if dataset == 'mnist':
         X_train, y_train, X_test, y_test = load_mnist_data(datadir)
@@ -192,7 +216,8 @@ def partition_data_non_iid(dataset, datadir, logdir, partition, n_parties, beta=
     elif dataset == 'celeba':
         X_train, y_train, X_test, y_test = load_celeba_data(datadir)
     elif dataset == 'femnist':
-        X_train, y_train, u_train, X_test, y_test, u_test = load_femnist_data(datadir)
+        X_train, y_train, u_train, X_test, y_test, u_test = load_femnist_data(
+            datadir)
     elif dataset == 'cifar100':
         X_train, y_train, X_test, y_test = load_cifar100_data(datadir)
     elif dataset == 'tinyimagenet':
@@ -206,7 +231,7 @@ def partition_data_non_iid(dataset, datadir, logdir, partition, n_parties, beta=
                 p3 = random.random()
                 if loc > 1:
                     p2 = -p2
-                if loc % 2 ==1:
+                if loc % 2 == 1:
                     p3 = -p3
                 if i % 2 == 0:
                     X_train.append([p1, p2, p3])
@@ -220,7 +245,7 @@ def partition_data_non_iid(dataset, datadir, logdir, partition, n_parties, beta=
             p2 = random.random() * 2 - 1
             p3 = random.random() * 2 - 1
             X_test.append([p1, p2, p3])
-            if p1>0:
+            if p1 > 0:
                 y_test.append(0)
             else:
                 y_test.append(1)
@@ -228,16 +253,16 @@ def partition_data_non_iid(dataset, datadir, logdir, partition, n_parties, beta=
         X_test = np.array(X_test, dtype=np.float32)
         y_train = np.array(y_train, dtype=np.int32)
         y_test = np.array(y_test, dtype=np.int64)
-        idxs = np.linspace(0,3999,4000,dtype=np.int64)
+        idxs = np.linspace(0, 3999, 4000, dtype=np.int64)
         batch_idxs = np.array_split(idxs, n_parties)
         net_dataidx_map = {i: batch_idxs[i] for i in range(n_parties)}
         mkdirs("data/generated/")
-        np.save("data/generated/X_train.npy",X_train)
-        np.save("data/generated/X_test.npy",X_test)
-        np.save("data/generated/y_train.npy",y_train)
-        np.save("data/generated/y_test.npy",y_test)
-    
-    #elif dataset == 'covtype':
+        np.save("data/generated/X_train.npy", X_train)
+        np.save("data/generated/X_test.npy", X_test)
+        np.save("data/generated/y_train.npy", y_train)
+        np.save("data/generated/y_test.npy", y_test)
+
+    # elif dataset == 'covtype':
     #    cov_type = sk.fetch_covtype('./data')
     #    num_train = int(581012 * 0.75)
     #    idxs = np.random.permutation(581012)
@@ -267,17 +292,18 @@ def partition_data_non_iid(dataset, datadir, logdir, partition, n_parties, beta=
         y_train = np.array(y_train[idxs[:num_train]], dtype=np.int32)
 
         mkdirs("data/generated/")
-        np.save("data/generated/X_train.npy",X_train)
-        np.save("data/generated/X_test.npy",X_test)
-        np.save("data/generated/y_train.npy",y_train)
-        np.save("data/generated/y_test.npy",y_test)
+        np.save("data/generated/X_train.npy", X_train)
+        np.save("data/generated/X_test.npy", X_test)
+        np.save("data/generated/y_train.npy", y_train)
+        np.save("data/generated/y_test.npy", y_test)
 
     elif dataset in ('a9a'):
         X_train, y_train = load_svmlight_file(datadir+"a9a")
         X_test, y_test = load_svmlight_file(datadir+"a9a.t")
         X_train = X_train.todense()
         X_test = X_test.todense()
-        X_test = np.c_[X_test, np.zeros((len(y_test), X_train.shape[1] - np.size(X_test[0, :])))]
+        X_test = np.c_[X_test, np.zeros(
+            (len(y_test), X_train.shape[1] - np.size(X_test[0, :])))]
 
         X_train = np.array(X_train, dtype=np.float32)
         X_test = np.array(X_test, dtype=np.float32)
@@ -287,11 +313,10 @@ def partition_data_non_iid(dataset, datadir, logdir, partition, n_parties, beta=
         y_test = np.array(y_test, dtype=np.int32)
 
         mkdirs("data/generated/")
-        np.save("data/generated/X_train.npy",X_train)
-        np.save("data/generated/X_test.npy",X_test)
-        np.save("data/generated/y_train.npy",y_train)
-        np.save("data/generated/y_test.npy",y_test)
-
+        np.save("data/generated/X_train.npy", X_train)
+        np.save("data/generated/X_test.npy", X_test)
+        np.save("data/generated/y_train.npy", y_train)
+        np.save("data/generated/y_test.npy", y_test)
 
     n_train = y_train.shape[0]
 
@@ -300,11 +325,11 @@ def partition_data_non_iid(dataset, datadir, logdir, partition, n_parties, beta=
         batch_idxs = np.array_split(idxs, n_parties)
         net_dataidx_map = {i: batch_idxs[i] for i in range(n_parties)}
 
-
     elif partition == "noniid-labeldir":
         min_size = 0
         min_require_size = 10
         K = 10
+        preallocate = 10  # 与 FedPAC 保持一致：预分配样本数，确保每个 party 每个类至少有 preallocate 个样本
         if dataset in ('celeba', 'covtype', 'a9a', 'rcv1', 'SUSY'):
             K = 2
             # min_require_size = 100
@@ -314,7 +339,7 @@ def partition_data_non_iid(dataset, datadir, logdir, partition, n_parties, beta=
             K = 200
 
         N = y_train.shape[0]
-        #np.random.seed(2020)
+        # np.random.seed(2020)
         net_dataidx_map = {}
 
         while min_size < min_require_size:
@@ -322,23 +347,30 @@ def partition_data_non_iid(dataset, datadir, logdir, partition, n_parties, beta=
             for k in range(K):
                 idx_k = np.where(y_train == k)[0]
                 np.random.shuffle(idx_k)
+                # 与 FedPAC 保持一致：为每个 party 预分配 preallocate 个该类样本
+                for i in range(n_parties):
+                    if len(idx_k) > preallocate - 1:
+                        idx_batch[i].extend(idx_k[:preallocate])
+                        idx_k = idx_k[preallocate:]
                 proportions = np.random.dirichlet(np.repeat(beta, n_parties))
                 # logger.info("proportions1: ", proportions)
                 # logger.info("sum pro1:", np.sum(proportions))
-                ## Balance
-                proportions = np.array([p * (len(idx_j) < N / n_parties) for p, idx_j in zip(proportions, idx_batch)])
+                # Balance
+                proportions = np.array(
+                    [p * (len(idx_j) < N / n_parties) for p, idx_j in zip(proportions, idx_batch)])
                 # logger.info("proportions2: ", proportions)
                 proportions = proportions / proportions.sum()
                 # logger.info("proportions3: ", proportions)
-                proportions = (np.cumsum(proportions) * len(idx_k)).astype(int)[:-1]
+                proportions = (np.cumsum(proportions) *
+                               len(idx_k)).astype(int)[:-1]
                 # logger.info("proportions4: ", proportions)
-                idx_batch = [idx_j + idx.tolist() for idx_j, idx in zip(idx_batch, np.split(idx_k, proportions))]
+                idx_batch = [idx_j + idx.tolist() for idx_j,
+                             idx in zip(idx_batch, np.split(idx_k, proportions))]
                 min_size = min([len(idx_j) for idx_j in idx_batch])
                 # if K == 2 and n_parties <= 10:
                 #     if np.min(proportions) < 200:
                 #         min_size = 0
                 #         break
-
 
         for j in range(n_parties):
             np.random.shuffle(idx_batch[j])
@@ -356,37 +388,41 @@ def partition_data_non_iid(dataset, datadir, logdir, partition, n_parties, beta=
         elif dataset == "tinyimagenet":
             K = 200
         if num == 10:
-            net_dataidx_map ={i:np.ndarray(0,dtype=np.int64) for i in range(n_parties)}
+            net_dataidx_map = {i: np.ndarray(
+                0, dtype=np.int64) for i in range(n_parties)}
             for i in range(10):
-                idx_k = np.where(y_train==i)[0]
+                idx_k = np.where(y_train == i)[0]
                 np.random.shuffle(idx_k)
-                split = np.array_split(idx_k,n_parties)
+                split = np.array_split(idx_k, n_parties)
                 for j in range(n_parties):
-                    net_dataidx_map[j]=np.append(net_dataidx_map[j],split[j])
+                    net_dataidx_map[j] = np.append(
+                        net_dataidx_map[j], split[j])
         else:
-            times=[0 for i in range(K)]
-            contain=[]
+            times = [0 for i in range(K)]
+            contain = []
             for i in range(n_parties):
-                current=[i%K]
-                times[i%K]+=1
-                j=1
-                while (j<num):
-                    ind=random.randint(0,K-1)
+                current = [i % K]
+                times[i % K] += 1
+                j = 1
+                while (j < num):
+                    ind = random.randint(0, K-1)
                     if (ind not in current):
-                        j=j+1
+                        j = j+1
                         current.append(ind)
-                        times[ind]+=1
+                        times[ind] += 1
                 contain.append(current)
-            net_dataidx_map ={i:np.ndarray(0,dtype=np.int64) for i in range(n_parties)}
+            net_dataidx_map = {i: np.ndarray(
+                0, dtype=np.int64) for i in range(n_parties)}
             for i in range(K):
-                idx_k = np.where(y_train==i)[0]
+                idx_k = np.where(y_train == i)[0]
                 np.random.shuffle(idx_k)
-                split = np.array_split(idx_k,times[i])
-                ids=0
+                split = np.array_split(idx_k, times[i])
+                ids = 0
                 for j in range(n_parties):
                     if i in contain[j]:
-                        net_dataidx_map[j]=np.append(net_dataidx_map[j],split[ids])
-                        ids+=1
+                        net_dataidx_map[j] = np.append(
+                            net_dataidx_map[j], split[ids])
+                        ids += 1
 
     elif partition == "iid-diff-quantity":
         idxs = np.random.permutation(n_train)
@@ -396,9 +432,9 @@ def partition_data_non_iid(dataset, datadir, logdir, partition, n_parties, beta=
             proportions = proportions/proportions.sum()
             min_size = np.min(proportions*len(idxs))
         proportions = (np.cumsum(proportions)*len(idxs)).astype(int)[:-1]
-        batch_idxs = np.split(idxs,proportions)
+        batch_idxs = np.split(idxs, proportions)
         net_dataidx_map = {i: batch_idxs[i] for i in range(n_parties)}
-        
+
     elif partition == "mixed":
         min_size = 0
         min_require_size = 10
@@ -410,20 +446,20 @@ def partition_data_non_iid(dataset, datadir, logdir, partition, n_parties, beta=
         N = y_train.shape[0]
         net_dataidx_map = {}
 
-        times=[1 for i in range(10)]
-        contain=[]
+        times = [1 for i in range(10)]
+        contain = []
         for i in range(n_parties):
-            current=[i%K]
-            j=1
-            while (j<2):
-                ind=random.randint(0,K-1)
-                if (ind not in current and times[ind]<2):
-                    j=j+1
+            current = [i % K]
+            j = 1
+            while (j < 2):
+                ind = random.randint(0, K-1)
+                if (ind not in current and times[ind] < 2):
+                    j = j+1
                     current.append(ind)
-                    times[ind]+=1
+                    times[ind] += 1
             contain.append(current)
-        net_dataidx_map ={i:np.ndarray(0,dtype=np.int64) for i in range(n_parties)}
-        
+        net_dataidx_map = {i: np.ndarray(0, dtype=np.int64)
+                           for i in range(n_parties)}
 
         min_size = 0
         while min_size < 10:
@@ -432,63 +468,68 @@ def partition_data_non_iid(dataset, datadir, logdir, partition, n_parties, beta=
             min_size = np.min(proportions*n_train)
 
         for i in range(K):
-            idx_k = np.where(y_train==i)[0]
+            idx_k = np.where(y_train == i)[0]
             np.random.shuffle(idx_k)
 
             proportions_k = np.random.dirichlet(np.repeat(beta, 2))
-            #proportions_k = np.ndarray(0,dtype=np.float64)
-            #for j in range(n_parties):
+            # proportions_k = np.ndarray(0,dtype=np.float64)
+            # for j in range(n_parties):
             #    if i in contain[j]:
             #        proportions_k=np.append(proportions_k ,proportions[j])
 
-            proportions_k = (np.cumsum(proportions_k)*len(idx_k)).astype(int)[:-1]
+            proportions_k = (np.cumsum(proportions_k) *
+                             len(idx_k)).astype(int)[:-1]
 
             split = np.split(idx_k, proportions_k)
-            ids=0
+            ids = 0
             for j in range(n_parties):
                 if i in contain[j]:
-                    net_dataidx_map[j]=np.append(net_dataidx_map[j],split[ids])
-                    ids+=1
+                    net_dataidx_map[j] = np.append(
+                        net_dataidx_map[j], split[ids])
+                    ids += 1
 
     elif partition == "real" and dataset == "femnist":
         num_user = u_train.shape[0]
-        user = np.zeros(num_user+1,dtype=np.int32)
-        for i in range(1,num_user+1):
+        user = np.zeros(num_user+1, dtype=np.int32)
+        for i in range(1, num_user+1):
             user[i] = user[i-1] + u_train[i-1]
         no = np.random.permutation(num_user)
         batch_idxs = np.array_split(no, n_parties)
-        net_dataidx_map = {i:np.zeros(0,dtype=np.int32) for i in range(n_parties)}
+        net_dataidx_map = {i: np.zeros(0, dtype=np.int32)
+                           for i in range(n_parties)}
         for i in range(n_parties):
             for j in batch_idxs[i]:
-                net_dataidx_map[i]=np.append(net_dataidx_map[i], np.arange(user[j], user[j+1]))
-                
+                net_dataidx_map[i] = np.append(
+                    net_dataidx_map[i], np.arange(user[j], user[j+1]))
+
     elif partition == "transfer-from-femnist":
         stat = np.load("femnist-dis.npy")
         n_total = stat.shape[0]
         chosen = np.random.permutation(n_total)[:n_parties]
-        stat = stat[chosen,:]
-        
+        stat = stat[chosen, :]
+
         if dataset in ('celeba', 'covtype', 'a9a', 'rcv1', 'SUSY'):
             K = 2
         else:
             K = 10
-        
+
         N = y_train.shape[0]
-        #np.random.seed(2020)
+        # np.random.seed(2020)
         net_dataidx_map = {}
 
         idx_batch = [[] for _ in range(n_parties)]
         for k in range(K):
             idx_k = np.where(y_train == k)[0]
             np.random.shuffle(idx_k)
-            proportions = stat[:,k]
+            proportions = stat[:, k]
             # logger.info("proportions2: ", proportions)
             proportions = proportions / proportions.sum()
             # logger.info("proportions3: ", proportions)
-            proportions = (np.cumsum(proportions) * len(idx_k)).astype(int)[:-1]
+            proportions = (np.cumsum(proportions) *
+                           len(idx_k)).astype(int)[:-1]
             # logger.info("proportions4: ", proportions)
-            idx_batch = [idx_j + idx.tolist() for idx_j, idx in zip(idx_batch, np.split(idx_k, proportions))]
-  
+            idx_batch = [idx_j + idx.tolist() for idx_j,
+                         idx in zip(idx_batch, np.split(idx_k, proportions))]
 
         for j in range(n_parties):
             np.random.shuffle(idx_batch[j])
@@ -496,54 +537,56 @@ def partition_data_non_iid(dataset, datadir, logdir, partition, n_parties, beta=
 
     elif partition == "transfer-from-criteo":
         stat0 = np.load("criteo-dis.npy")
-        
+
         n_total = stat0.shape[0]
-        flag=True
+        flag = True
         while (flag):
             chosen = np.random.permutation(n_total)[:n_parties]
-            stat = stat0[chosen,:]
+            stat = stat0[chosen, :]
             check = [0 for i in range(10)]
             for ele in stat:
                 for j in range(10):
-                    if ele[j]>0:
-                        check[j]=1
-            flag=False
+                    if ele[j] > 0:
+                        check[j] = 1
+            flag = False
             for i in range(10):
-                if check[i]==0:
-                    flag=True
+                if check[i] == 0:
+                    flag = True
                     break
-                    
-        
+
         if dataset in ('celeba', 'covtype', 'a9a', 'rcv1', 'SUSY'):
             K = 2
-            stat[:,0]=np.sum(stat[:,:5],axis=1)
-            stat[:,1]=np.sum(stat[:,5:],axis=1)
+            stat[:, 0] = np.sum(stat[:, :5], axis=1)
+            stat[:, 1] = np.sum(stat[:, 5:], axis=1)
         else:
             K = 10
-        
+
         N = y_train.shape[0]
-        #np.random.seed(2020)
+        # np.random.seed(2020)
         net_dataidx_map = {}
 
         idx_batch = [[] for _ in range(n_parties)]
         for k in range(K):
             idx_k = np.where(y_train == k)[0]
             np.random.shuffle(idx_k)
-            proportions = stat[:,k]
+            proportions = stat[:, k]
             # logger.info("proportions2: ", proportions)
             proportions = proportions / proportions.sum()
             # logger.info("proportions3: ", proportions)
-            proportions = (np.cumsum(proportions) * len(idx_k)).astype(int)[:-1]
+            proportions = (np.cumsum(proportions) *
+                           len(idx_k)).astype(int)[:-1]
             # logger.info("proportions4: ", proportions)
-            idx_batch = [idx_j + idx.tolist() for idx_j, idx in zip(idx_batch, np.split(idx_k, proportions))]
-  
+            idx_batch = [idx_j + idx.tolist() for idx_j,
+                         idx in zip(idx_batch, np.split(idx_k, proportions))]
 
         for j in range(n_parties):
             np.random.shuffle(idx_batch[j])
             net_dataidx_map[j] = idx_batch[j]
-            
-    traindata_cls_counts = record_net_data_stats(y_train, net_dataidx_map, logdir)
+
+    traindata_cls_counts = record_net_data_stats(
+        y_train, net_dataidx_map, logdir)
     return (X_train, y_train, X_test, y_test, net_dataidx_map, traindata_cls_counts)
+
 
 class AddGaussianNoise(object):
     def __init__(self, mean=0., std=1., net_id=None, total=0):
@@ -565,12 +608,13 @@ class AddGaussianNoise(object):
             col = self.net_id % size
             for i in range(size):
                 for j in range(size):
-                    filt[:,row*size+i,col*size+j] = 1
+                    filt[:, row*size+i, col*size+j] = 1
             tmp = tmp * filt
             return tensor + tmp * self.std + self.mean
 
     def __repr__(self):
         return self.__class__.__name__ + '(mean={0}, std={1})'.format(self.mean, self.std)
+
 
 def get_dataloader(dataset, datadir, train_bs, test_bs, dataidxs=None, noise_level=0, net_id=None, total=0):
     if dataset in ('mnist', 'femnist', 'fmnist', 'cifar10', 'svhn', 'generated', 'covtype', 'a9a', 'rcv1', 'SUSY', 'cifar100', 'tinyimagenet'):
@@ -612,7 +656,6 @@ def get_dataloader(dataset, datadir, train_bs, test_bs, dataidxs=None, noise_lev
                 transforms.ToTensor(),
                 AddGaussianNoise(0., noise_level, net_id, total)])
 
-
         elif dataset == 'cifar10':
             dl_obj = CIFAR10_truncated
 
@@ -631,7 +674,7 @@ def get_dataloader(dataset, datadir, train_bs, test_bs, dataidxs=None, noise_lev
             transform_test = transforms.Compose([
                 transforms.ToTensor(),
                 AddGaussianNoise(0., noise_level, net_id, total)])
-            
+
         elif dataset == 'cifar100':
             dl_obj = CIFAR100_truncated
 
@@ -658,7 +701,7 @@ def get_dataloader(dataset, datadir, train_bs, test_bs, dataidxs=None, noise_lev
         elif dataset == 'tinyimagenet':
             dl_obj = ImageFolder_custom
             transform_train = transforms.Compose([
-                transforms.Resize(32), 
+                transforms.Resize(32),
                 transforms.RandomCrop(32, padding=4),
                 transforms.RandomHorizontalFlip(),
                 transforms.RandomRotation(15),
@@ -666,7 +709,7 @@ def get_dataloader(dataset, datadir, train_bs, test_bs, dataidxs=None, noise_lev
                 transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
             ])
             transform_test = transforms.Compose([
-                transforms.Resize(32), 
+                transforms.Resize(32),
                 transforms.ToTensor(),
                 transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
             ])
@@ -676,15 +719,19 @@ def get_dataloader(dataset, datadir, train_bs, test_bs, dataidxs=None, noise_lev
             transform_train = None
             transform_test = None
 
-
         if dataset == "tinyimagenet":
-            train_ds = dl_obj(datadir+'./train/', dataidxs=dataidxs, transform=transform_train)
+            train_ds = dl_obj(datadir+'./train/',
+                              dataidxs=dataidxs, transform=transform_train)
             test_ds = dl_obj(datadir+'./val/', transform=transform_test)
         else:
-            train_ds = dl_obj(datadir, dataidxs=dataidxs, train=True, transform=transform_train, download=True)
-            test_ds = dl_obj(datadir, train=False, transform=transform_test, download=True)
+            train_ds = dl_obj(datadir, dataidxs=dataidxs, train=True,
+                              transform=transform_train, download=True)
+            test_ds = dl_obj(datadir, train=False,
+                             transform=transform_test, download=True)
 
-        train_dl = data.DataLoader(dataset=train_ds, batch_size=train_bs, shuffle=True, drop_last=False)
-        test_dl = data.DataLoader(dataset=test_ds, batch_size=test_bs, shuffle=False, drop_last=False)
+        train_dl = data.DataLoader(
+            dataset=train_ds, batch_size=train_bs, shuffle=True, drop_last=False)
+        test_dl = data.DataLoader(
+            dataset=test_ds, batch_size=test_bs, shuffle=False, drop_last=False)
 
     return train_dl, test_dl, train_ds, test_ds

@@ -10,6 +10,7 @@ from torchvision import transforms
 from torchvision.datasets import MNIST
 N_CLASSES = 10
 
+
 class CheXpertDataset(Dataset):
     def __init__(self, dataset_type, data_np, label_np, pre_w, pre_h, lab_trans=None, un_trans_wk=None, data_idxs=None,
                  is_labeled=False,
@@ -39,7 +40,8 @@ class CheXpertDataset(Dataset):
         else:
             self.transform = lab_trans
 
-        print('Total # images:{}, labels:{}'.format(len(self.images), len(self.labels)))
+        print('Total # images:{}, labels:{}'.format(
+            len(self.images), len(self.labels)))
 
     def __getitem__(self, index):
         """
@@ -79,6 +81,7 @@ class CheXpertDataset(Dataset):
     def __len__(self):
         return len(self.labels)
 
+
 class Generated(MNIST):
 
     def __init__(self, root, dataidxs=None, train=True, transform=None, target_transform=None,
@@ -93,12 +96,11 @@ class Generated(MNIST):
             self.targets = np.load("data/generated/y_train.npy")
         else:
             self.data = np.load("data/generated/X_test.npy")
-            self.targets = np.load("data/generated/y_test.npy")            
+            self.targets = np.load("data/generated/y_test.npy")
 
         if self.dataidxs is not None:
             self.data = self.data[self.dataidxs]
-            self.targets = self.targets[self.dataidxs]        
-
+            self.targets = self.targets[self.dataidxs]
 
     def __getitem__(self, index):
         data, target = self.data[index], self.targets[index]
@@ -107,11 +109,16 @@ class Generated(MNIST):
     def __len__(self):
         return len(self.data)
 
+
 class TransformTwice:
-    def __init__(self, transform):
-        self.transform = transform
+    """支持弱增强+强增强的双重变换类，与 FedPAC 保持一致"""
+
+    def __init__(self, weak_trans, strong_trans=None):
+        self.wk_transform = weak_trans
+        # 如果没有提供强增强，则使用弱增强
+        self.st_transform = strong_trans if strong_trans is not None else weak_trans
 
     def __call__(self, inp):
-        out1 = self.transform(inp)
-        out2 = self.transform(inp)
+        out1 = self.wk_transform(inp)
+        out2 = self.st_transform(inp)
         return [out1, out2]
