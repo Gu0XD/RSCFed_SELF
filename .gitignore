@@ -4,6 +4,7 @@ data/*
 !data/.gitkeep
 *.log
 *.pth
+*.pyc
 
 tensorboard/cifar10/*
 !tensorboard/cifar10/.gitkeep
